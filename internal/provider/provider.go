@@ -51,14 +51,16 @@ func configureSlackClient(d Model) (*slack.Client, error) {
 	baseURL := stringOrEnvironment(d.BaseURL, "SLACK_BASE_URL")
 	appConfigurationToken := stringOrEnvironment(d.AppConfigurationToken, "SLACK_APP_CONFIGURATION_TOKEN")
 	refreshToken := stringOrEnvironment(d.RefreshToken, "SLACK_REFRESH_TOKEN")
+	developerToken := stringOrEnvironment(d.DeveloperToken, "SLACK_DEVELOPER_TOKEN")
 
-	if appConfigurationToken == "" && refreshToken == "" && store == nil {
-		return nil, errors.New("either app configuration token, refresh token or token store must be provided")
+	if appConfigurationToken == "" && refreshToken == "" && store == nil && developerToken == "" {
+		return nil, errors.New("either app configuration token, refresh token or token store must be provided, unless developer_token is set for installation-only use")
 	}
 
 	client := slack.NewClient().
 		WithAppConfigurationToken(tokens.AppConfigurationToken(appConfigurationToken)).
-		WithRefreshToken(tokens.RefreshToken(refreshToken))
+		WithRefreshToken(tokens.RefreshToken(refreshToken)).
+		WithDeveloperToken(developerToken)
 
 	if store != nil {
 		client = client.WithTokenStore(store)
@@ -138,6 +140,7 @@ func requireKnownTokenAttributes(d Model) error {
 		"app_configuration_token": d.AppConfigurationToken,
 		"refresh_token":           d.RefreshToken,
 		"token_store":             d.TokenStore,
+		"developer_token":         d.DeveloperToken,
 	}
 	for name, value := range d.TokenStore.Attributes() {
 		values["token_store."+name] = value
@@ -166,6 +169,7 @@ type Model struct {
 	RefreshToken          types.String `tfsdk:"refresh_token"`
 	BaseURL               types.String `tfsdk:"base_url"`
 	TokenStore            types.Object `tfsdk:"token_store"`
+	DeveloperToken        types.String `tfsdk:"developer_token"`
 }
 
 type Provider struct {
@@ -197,6 +201,14 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, response 
 			"To switch, change `source` to `\"ymm-oss/slackapp\"`, then run " +
 			"`terraform state replace-provider yumemi-inc/slackapp ymm-oss/slackapp` and `terraform init`.",
 		Attributes: map[string]schema.Attribute{
+			"developer_token": schema.StringAttribute{
+				MarkdownDescription: "Experimental: Slack CLI service token for native workspace installation and supplied-ID inventory. " +
+					"Can be set with SLACK_DEVELOPER_TOKEN. This is separate from manifest configuration tokens. " +
+					"Uses the CLI's apps.developerInstall, apps.developerUninstall and apps.status APIs; " +
+					"these have no public Web API stability contract. Organization tokens are unsupported.",
+				Sensitive: true,
+				Optional:  true,
+			},
 			"app_configuration_token": schema.StringAttribute{
 				MarkdownDescription: "App configuration token for the Slack Workspace.",
 				Sensitive:           true,
@@ -265,16 +277,19 @@ func (p *Provider) Configure(
 	}
 
 	response.ResourceData = client
+	response.DataSourceData = client
 }
 
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		newManifestDataSource,
+		newInstallationInventoryDataSource,
 	}
 }
 
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		newApplicationResource,
+		newInstallationResource,
 	}
 }

@@ -19,7 +19,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/ymm-oss/slackapp",
+		Address: "registry.terraform.io/easypost/slackapp",
 		Debug:   debug,
 	}
 

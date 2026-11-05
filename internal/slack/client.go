@@ -25,6 +25,8 @@ type Client struct {
 	tokens *tokens.Source
 
 	baseURL string
+	//declscope:shared
+	developerToken string
 }
 
 // NewClient returns a client with no token. Give it at least one of an app
@@ -44,6 +46,12 @@ func NewClient() *Client {
 func (c *Client) WithBaseURL(baseURL string) *Client {
 	c.baseURL = baseURL
 
+	return c
+}
+
+// WithDeveloperToken sets the Slack CLI service token used by installation methods.
+func (c *Client) WithDeveloperToken(token string) *Client {
+	c.developerToken = token
 	return c
 }
 

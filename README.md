@@ -1,5 +1,7 @@
 # Terraform Provider for Slack Apps
 
+This is EasyPost's development fork. See [the fork guide](README.fork.md) for experimental native installation and installation inventory through OpenTofu. The EasyPost provider address is not published to a registry yet.
+
 [![CI](https://github.com/ymm-oss/terraform-provider-slackapp/actions/workflows/ci.yml/badge.svg)](https://github.com/ymm-oss/terraform-provider-slackapp/actions/workflows/ci.yml)
 [![Codecov](https://codecov.io/gh/ymm-oss/terraform-provider-slackapp/graph/badge.svg)](https://codecov.io/gh/ymm-oss/terraform-provider-slackapp)
 
