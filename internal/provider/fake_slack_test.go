@@ -39,6 +39,16 @@ type fakeSlack struct {
 	refreshTokens []string
 	//declscope:private
 	usedRefreshTokens map[string]bool
+	//declscope:private
+	installations map[string]bool
+	//declscope:private
+	afterInstallStatus map[string]any
+	//declscope:private
+	afterInstallResponse map[string]any
+	//declscope:private
+	afterUninstallStatus map[string]any
+	//declscope:private
+	nextStatus map[string]any
 }
 
 // fakeSlackAppID is the ID the fake gives the nth app it creates, counting
@@ -60,6 +70,7 @@ func newFakeSlack(t *testing.T) *fakeSlack {
 		authorizations: map[string]string{},
 
 		usedRefreshTokens: map[string]bool{},
+		installations:     map[string]bool{},
 	}
 	f.server = httptest.NewServer(http.HandlerFunc(f.serveHTTP))
 	t.Cleanup(f.server.Close)
@@ -248,6 +259,24 @@ func (f *fakeSlack) succeed(method string) {
 	delete(f.failures, method)
 }
 
+//declscope:shared // installation tests challenge confirmation after a mutation
+func (f *fakeSlack) failInstallationConfirmation(install bool, reply map[string]any) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if install {
+		f.afterInstallStatus = reply
+	} else {
+		f.afterUninstallStatus = reply
+	}
+}
+
+//declscope:shared // installation tests challenge errors after partial execution
+func (f *fakeSlack) failInstallationAfterMutation(reply map[string]any) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.afterInstallResponse = reply
+}
+
 // authorization returns the Authorization header the last call of a method
 // sent.
 //
@@ -308,8 +337,10 @@ func (f *fakeSlack) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		AppID    string `json:"app_id"`
-		Manifest string `json:"manifest"`
+		AppID    string   `json:"app_id"`
+		Manifest string   `json:"manifest"`
+		AppIDs   []string `json:"app_ids"`
+		TeamID   string   `json:"team_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		f.reply(w, map[string]any{"ok": false, "error": "invalid_json"})
@@ -330,6 +361,36 @@ func (f *fakeSlack) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch method {
+	case "auth.test":
+		f.reply(w, map[string]any{"ok": true, "team_id": "T1", "user_id": "U1", "is_enterprise_install": false})
+	case "apps.status":
+		if f.nextStatus != nil {
+			reply := f.nextStatus
+			f.nextStatus = nil
+			f.reply(w, reply)
+			return
+		}
+		apps := make([]map[string]any, 0, len(body.AppIDs))
+		for _, appID := range body.AppIDs {
+			apps = append(apps, map[string]any{"app_id": appID, "is_installed": f.installations[appID]})
+		}
+		f.reply(w, map[string]any{"ok": true, "team": map[string]any{"team_id": body.TeamID}, "apps": apps})
+	case "apps.developerInstall":
+		f.installations[body.AppID] = true
+		f.nextStatus, f.afterInstallStatus = f.afterInstallStatus, nil
+		if f.afterInstallResponse != nil {
+			reply := f.afterInstallResponse
+			f.afterInstallResponse = nil
+			f.reply(w, reply)
+			return
+		}
+		f.reply(w, map[string]any{"ok": true, "app_id": body.AppID, "api_access_tokens": map[string]string{
+			"bot": fmt.Sprintf("bot-%s-%d", body.AppID, f.calls[method]),
+		}})
+	case "apps.developerUninstall":
+		f.installations[body.AppID] = false
+		f.nextStatus, f.afterUninstallStatus = f.afterUninstallStatus, nil
+		f.reply(w, map[string]any{"ok": true})
 	case "apps.manifest.create":
 		f.nextID++
 		appID := fakeSlackAppID(f.nextID)

@@ -1,0 +1,16 @@
+provider:
+  name: slackapp
+  module: github.com/ymm-oss/terraform-provider-slackapp
+sources:
+  - name: slack
+    connection_field: Client
+    spec:
+      path: contracts/slack-source.yaml
+      format: openapi3
+    safelist: contracts/safelist-paths.txt
+    package: slackapi
+    ogen_config: contracts/ogen.yml
+# WHY: Slack's POST observation body and uncertain installation lifecycle
+# need adapters; the API client and introspection are generated from the contract.
+resources: {}
+data_sources: {}

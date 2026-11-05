@@ -1,0 +1,447 @@
+{
+  "generated_from": [
+    ".codegen/slackapi/oas_client_gen.go",
+    ".codegen/slackapi/oas_response_decoders_gen.go",
+    ".codegen/slackapi/oas_schemas_gen.go",
+    ".codegen/slackapi/oas_parameters_gen.go"
+  ],
+  "operations": {
+    "AppsDeveloperInstall": {
+      "request_body_type": "InstallRequest",
+      "return_type": "*InstallResponse",
+      "parameters": null,
+      "responses": {
+        "200": {
+          "type": "InstallResponse",
+          "is_success": true,
+          "shape": "object"
+        }
+      },
+      "success_status_codes": [
+        "200"
+      ],
+      "primary_success_type": "InstallResponse",
+      "response_shape": "object"
+    },
+    "AppsDeveloperUninstall": {
+      "request_body_type": "UninstallRequest",
+      "return_type": "*Envelope",
+      "parameters": null,
+      "responses": {
+        "200": {
+          "type": "Envelope",
+          "is_success": true,
+          "shape": "object"
+        }
+      },
+      "success_status_codes": [
+        "200"
+      ],
+      "primary_success_type": "Envelope",
+      "response_shape": "object"
+    },
+    "AppsStatus": {
+      "request_body_type": "StatusRequest",
+      "return_type": "*StatusResponse",
+      "parameters": null,
+      "responses": {
+        "200": {
+          "type": "StatusResponse",
+          "is_success": true,
+          "shape": "object"
+        }
+      },
+      "success_status_codes": [
+        "200"
+      ],
+      "primary_success_type": "StatusResponse",
+      "response_shape": "object"
+    },
+    "AuthTest": {
+      "request_body_type": "EmptyRequest",
+      "return_type": "*AuthTestResponse",
+      "parameters": null,
+      "responses": {
+        "200": {
+          "type": "AuthTestResponse",
+          "is_success": true,
+          "shape": "object"
+        }
+      },
+      "success_status_codes": [
+        "200"
+      ],
+      "primary_success_type": "AuthTestResponse",
+      "response_shape": "object"
+    }
+  },
+  "models": {
+    "AppStatus": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "AppID",
+          "json_tag": "app_id",
+          "go_type": "string",
+          "wrapper_kind": "raw_string"
+        },
+        {
+          "name": "IsInstalled",
+          "json_tag": "is_installed",
+          "go_type": "OptNilBool",
+          "wrapper_kind": "opt_nil_bool"
+        }
+      ]
+    },
+    "AuthTestResponse": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "Ok",
+          "json_tag": "ok",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        },
+        {
+          "name": "Error",
+          "json_tag": "error",
+          "go_type": "OptString",
+          "wrapper_kind": "opt_string"
+        },
+        {
+          "name": "TeamID",
+          "json_tag": "team_id",
+          "go_type": "OptNilString",
+          "wrapper_kind": "opt_nil_string"
+        },
+        {
+          "name": "UserID",
+          "json_tag": "user_id",
+          "go_type": "OptNilString",
+          "wrapper_kind": "opt_nil_string"
+        },
+        {
+          "name": "BotID",
+          "json_tag": "bot_id",
+          "go_type": "OptNilString",
+          "wrapper_kind": "opt_nil_string"
+        },
+        {
+          "name": "IsEnterpriseInstall",
+          "json_tag": "is_enterprise_install",
+          "go_type": "OptNilBool",
+          "wrapper_kind": "opt_nil_bool"
+        }
+      ]
+    },
+    "DeveloperToken": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "Token",
+          "go_type": "string",
+          "wrapper_kind": "raw_string"
+        },
+        {
+          "name": "Roles",
+          "go_type": "[]string",
+          "wrapper_kind": "slice",
+          "nested_type": "string"
+        }
+      ]
+    },
+    "EmptyRequest": {
+      "kind": "struct"
+    },
+    "Envelope": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "Ok",
+          "json_tag": "ok",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        },
+        {
+          "name": "Error",
+          "json_tag": "error",
+          "go_type": "OptString",
+          "wrapper_kind": "opt_string"
+        }
+      ]
+    },
+    "InstallRequest": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "AppID",
+          "json_tag": "app_id",
+          "go_type": "string",
+          "wrapper_kind": "raw_string"
+        },
+        {
+          "name": "BotScopes",
+          "json_tag": "bot_scopes",
+          "go_type": "[]string",
+          "wrapper_kind": "slice",
+          "nested_type": "string"
+        },
+        {
+          "name": "OutgoingDomains",
+          "json_tag": "outgoing_domains",
+          "go_type": "[]string",
+          "wrapper_kind": "slice",
+          "nested_type": "string"
+        }
+      ]
+    },
+    "InstallResponse": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "Ok",
+          "json_tag": "ok",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        },
+        {
+          "name": "Error",
+          "json_tag": "error",
+          "go_type": "OptString",
+          "wrapper_kind": "opt_string"
+        },
+        {
+          "name": "AppID",
+          "json_tag": "app_id",
+          "go_type": "OptNilString",
+          "wrapper_kind": "opt_nil_string"
+        },
+        {
+          "name": "APIAccessTokens",
+          "json_tag": "api_access_tokens",
+          "go_type": "OptNilInstallationTokens",
+          "wrapper_kind": "struct",
+          "nested_type": "OptNilInstallationTokens"
+        }
+      ]
+    },
+    "InstallationTokens": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "Bot",
+          "json_tag": "bot",
+          "go_type": "OptNilString",
+          "wrapper_kind": "opt_nil_string"
+        },
+        {
+          "name": "AppLevel",
+          "json_tag": "app_level",
+          "go_type": "OptNilString",
+          "wrapper_kind": "opt_nil_string"
+        },
+        {
+          "name": "User",
+          "json_tag": "user",
+          "go_type": "OptNilString",
+          "wrapper_kind": "opt_nil_string"
+        }
+      ]
+    },
+    "OptNilAppStatusArray": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "Value",
+          "go_type": "[]AppStatus",
+          "wrapper_kind": "slice",
+          "nested_type": "AppStatus"
+        },
+        {
+          "name": "Set",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        },
+        {
+          "name": "Null",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        }
+      ]
+    },
+    "OptNilBool": {
+      "kind": "wrapper_primitive",
+      "fields": [
+        {
+          "name": "Value",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        },
+        {
+          "name": "Set",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        },
+        {
+          "name": "Null",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        }
+      ]
+    },
+    "OptNilInstallationTokens": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "Value",
+          "go_type": "InstallationTokens",
+          "wrapper_kind": "struct",
+          "nested_type": "InstallationTokens"
+        },
+        {
+          "name": "Set",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        },
+        {
+          "name": "Null",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        }
+      ]
+    },
+    "OptNilString": {
+      "kind": "wrapper_primitive",
+      "fields": [
+        {
+          "name": "Value",
+          "go_type": "string",
+          "wrapper_kind": "raw_string"
+        },
+        {
+          "name": "Set",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        },
+        {
+          "name": "Null",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        }
+      ]
+    },
+    "OptNilWorkspace": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "Value",
+          "go_type": "Workspace",
+          "wrapper_kind": "struct",
+          "nested_type": "Workspace"
+        },
+        {
+          "name": "Set",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        },
+        {
+          "name": "Null",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        }
+      ]
+    },
+    "OptString": {
+      "kind": "wrapper_primitive",
+      "fields": [
+        {
+          "name": "Value",
+          "go_type": "string",
+          "wrapper_kind": "raw_string"
+        },
+        {
+          "name": "Set",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        }
+      ]
+    },
+    "StatusRequest": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "AppIds",
+          "json_tag": "app_ids",
+          "go_type": "[]string",
+          "wrapper_kind": "slice",
+          "nested_type": "string"
+        },
+        {
+          "name": "TeamID",
+          "json_tag": "team_id",
+          "go_type": "string",
+          "wrapper_kind": "raw_string"
+        }
+      ]
+    },
+    "StatusResponse": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "Ok",
+          "json_tag": "ok",
+          "go_type": "bool",
+          "wrapper_kind": "raw_bool"
+        },
+        {
+          "name": "Error",
+          "json_tag": "error",
+          "go_type": "OptString",
+          "wrapper_kind": "opt_string"
+        },
+        {
+          "name": "Team",
+          "json_tag": "team",
+          "go_type": "OptNilWorkspace",
+          "wrapper_kind": "struct",
+          "nested_type": "OptNilWorkspace"
+        },
+        {
+          "name": "Apps",
+          "json_tag": "apps",
+          "go_type": "OptNilAppStatusArray",
+          "wrapper_kind": "struct",
+          "nested_type": "OptNilAppStatusArray"
+        }
+      ]
+    },
+    "UninstallRequest": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "AppID",
+          "json_tag": "app_id",
+          "go_type": "string",
+          "wrapper_kind": "raw_string"
+        },
+        {
+          "name": "TeamID",
+          "json_tag": "team_id",
+          "go_type": "string",
+          "wrapper_kind": "raw_string"
+        }
+      ]
+    },
+    "Workspace": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "TeamID",
+          "json_tag": "team_id",
+          "go_type": "OptString",
+          "wrapper_kind": "opt_string"
+        }
+      ]
+    }
+  }
+}

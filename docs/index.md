@@ -18,6 +18,7 @@ description: |-
 
 - `app_configuration_token` (String, Sensitive) App configuration token for the Slack Workspace.
 - `base_url` (String) Base URL of the Slack API. Defaults to `https://slack.com/api/`.
+- `developer_token` (String, Sensitive) Experimental: Slack CLI service token for native workspace installation and supplied-ID inventory. Can be set with SLACK_DEVELOPER_TOKEN. This is separate from manifest configuration tokens. Uses the CLI's apps.developerInstall, apps.developerUninstall and apps.status APIs; these have no public Web API stability contract. Organization tokens are unsupported.
 - `refresh_token` (String, Sensitive) Refresh token for the Slack Workspace.
 - `token_store` (Attributes) Where to keep the tokens that each rotation of the refresh token returns. Slack voids a refresh token once it is used, so without a store the configured refresh token works for one run only. Set exactly one of `file` and `command`. Can also be set with the `SLACK_TOKEN_STORE_FILE` or `SLACK_TOKEN_STORE_COMMAND` environment variable. (see [below for nested schema](#nestedatt--token_store))
 

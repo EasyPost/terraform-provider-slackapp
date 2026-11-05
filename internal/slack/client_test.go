@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -169,6 +170,174 @@ func TestClientRequest(t *testing.T) {
 	}
 	if !clientJSONEqual(t, got.body, `{"manifest":"{\"a\":1}"}`) {
 		t.Errorf("body = %s", got.body)
+	}
+}
+
+func TestDeveloperInstallProtocolAndSecretLogs(t *testing.T) {
+	t.Parallel()
+	s := newClientServer(t, map[string]string{
+		"auth.test":             `{"ok":true,"team_id":"T1","user_id":"U1"}`,
+		"apps.developerInstall": `{"ok":true,"app_id":"A1","api_access_tokens":{"bot":"bot-secret","user":"user-secret","app_level":"app-secret"}}`,
+	})
+	var logs bytes.Buffer
+	ctx := tflogtest.RootLogger(t.Context(), &logs)
+	client := s.client("configuration-secret").WithDeveloperToken("developer-secret")
+	result, err := client.DeveloperAppInstall(ctx, slack.DeveloperInstallRequest{
+		AppID: "A1", WorkspaceID: "T1", BotScopes: []string{"chat:write"}, OutgoingDomains: []string{"example.com"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Bot != "bot-secret" || result.User != "user-secret" || result.AppLevel != "app-secret" {
+		t.Fatalf("tokens were not preserved")
+	}
+	calls := s.recorded()
+	if len(calls) != 2 || calls[1].method != "apps.developerInstall" {
+		t.Fatalf("unexpected methods: %v", s.methods())
+	}
+	for _, call := range calls {
+		if call.authorization != "Bearer developer-secret" {
+			t.Fatal("installation used the wrong credential kind")
+		}
+	}
+	if !clientJSONEqual(t, calls[1].body, `{"app_id":"A1","bot_scopes":["chat:write"],"outgoing_domains":["example.com"]}`) {
+		t.Fatalf("workspace install body = %s", calls[1].body)
+	}
+	for _, secret := range []string{"configuration-secret", "developer-secret", "bot-secret", "user-secret", "app-secret"} {
+		if strings.Contains(logs.String(), secret) {
+			t.Fatal("a secret reached logs")
+		}
+	}
+}
+
+func TestDeveloperStatusPreservesUnknownAndValidatesIdentity(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name      string
+		response  string
+		wantError bool
+	}{
+		{"partial", `{"ok":true,"team":{"team_id":"T1"},"apps":[{"app_id":"A1","is_installed":true},{"app_id":"A2","is_installed":false},{"app_id":"A3"}]}`, false},
+		{"null_flag", `{"ok":true,"team":{"team_id":"T1"},"apps":[{"app_id":"A1","is_installed":true},{"app_id":"A2","is_installed":false},{"app_id":"A3","is_installed":null}]}`, false},
+		{"wrong_team", `{"ok":true,"team":{"team_id":"T2"},"apps":[]}`, true},
+		{"duplicate", `{"ok":true,"team":{"team_id":"T1"},"apps":[{"app_id":"A1","is_installed":true},{"app_id":"A1","is_installed":false}]}`, true},
+		{"unexpected", `{"ok":true,"team":{"team_id":"T1"},"apps":[{"app_id":"A9","is_installed":true}]}`, true},
+		{"missing_apps", `{"ok":true,"team":{"team_id":"T1"}}`, true},
+		{"null_apps", `{"ok":true,"team":{"team_id":"T1"},"apps":null}`, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newClientServer(t, map[string]string{
+				"auth.test":   `{"ok":true,"team_id":"T1","user_id":"U1"}`,
+				"apps.status": tc.response,
+			})
+			statuses, err := s.client("").WithDeveloperToken("developer").DeveloperAppStatus(t.Context(), "T1", []string{"A1", "A2", "A3", "A4"})
+			if (err != nil) != tc.wantError {
+				t.Fatalf("error = %v", err)
+			}
+			if !tc.wantError && (statuses["A1"] != slack.InstallationInstalled ||
+				statuses["A2"] != slack.InstallationUninstalled ||
+				statuses["A3"] != slack.InstallationUnknown ||
+				statuses["A4"] != slack.InstallationUnknown) {
+				t.Fatalf("unexpected observations: %v", statuses)
+			}
+		})
+	}
+}
+
+func TestDeveloperMutationRequiresWorkspaceUserToken(t *testing.T) {
+	t.Parallel()
+	for _, auth := range []string{
+		`{"ok":true,"team_id":"T2","user_id":"U1"}`,
+		`{"ok":true,"team_id":"T1","user_id":"U1","is_enterprise_install":true}`,
+		`{"ok":true,"team_id":"T1"}`,
+		`{"ok":true,"team_id":"T1","user_id":"U1","bot_id":"B1"}`,
+	} {
+		s := newClientServer(t, map[string]string{"auth.test": auth})
+		client := s.client("").WithDeveloperToken("developer")
+		if _, err := client.DeveloperAppInstall(t.Context(), slack.DeveloperInstallRequest{AppID: "A1", WorkspaceID: "T1"}); err == nil {
+			t.Fatal("invalid token accepted")
+		}
+		if err := client.DeveloperAppUninstall(t.Context(), "T1", "A1"); err == nil {
+			t.Fatal("invalid token accepted")
+		}
+		for _, call := range s.recorded() {
+			if call.method != "auth.test" {
+				t.Fatal("mutation was attempted with an invalid token")
+			}
+		}
+	}
+}
+
+func TestDeveloperInstallRejectsUnrelatedTokens(t *testing.T) {
+	t.Parallel()
+	s := newClientServer(t, map[string]string{
+		"auth.test":             `{"ok":true,"team_id":"T1","user_id":"U1"}`,
+		"apps.developerInstall": `{"ok":true,"app_id":"A2","api_access_tokens":{"bot":"unrelated-secret"}}`,
+	})
+	credentials, err := s.client("").WithDeveloperToken("developer").DeveloperAppInstall(t.Context(), slack.DeveloperInstallRequest{
+		AppID: "A1", WorkspaceID: "T1", BotScopes: []string{"chat:write"},
+	})
+	if err == nil || credentials != (slack.InstallationTokens{}) {
+		t.Fatal("mismatched app identity returned credentials")
+	}
+}
+
+func TestDeveloperContractFailuresDoNotExposeCredentials(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{
+		`{"ok":true,"app_id":"A1","api_access_tokens":{"bot":123,"user":"response-secret"}}`,
+		`{"ok":false,"error":"response-secret","description":"response-secret"}`,
+		`{"app_id":"A1","api_access_tokens":{"bot":"response-secret"}}`,
+		`{"ok":true,"app_id":"A1","api_access_tokens":{"bot":"response-secret"}}` +
+			`{"unexpected":"response-secret"}`,
+		`{"ok":true,"app_id":"A1","padding":"` + strings.Repeat("x", 1024*1024) +
+			`","api_access_tokens":{"bot":"response-secret"}}`,
+	} {
+		s := newClientServer(t, map[string]string{
+			"auth.test":             `{"ok":true,"team_id":"T1","user_id":"U1"}`,
+			"apps.developerInstall": reply,
+		})
+		var logs bytes.Buffer
+		ctx := tflogtest.RootLogger(t.Context(), &logs)
+		credentials, err := s.client("").WithDeveloperToken("request-secret").DeveloperAppInstall(ctx,
+			slack.DeveloperInstallRequest{AppID: "A1", WorkspaceID: "T1", BotScopes: []string{"chat:write"}})
+		if err == nil || credentials != (slack.InstallationTokens{}) {
+			t.Fatal("invalid or oversized contract response returned credentials")
+		}
+		for _, secret := range []string{"request-secret", "response-secret"} {
+			if strings.Contains(err.Error(), secret) || strings.Contains(logs.String(), secret) {
+				t.Fatal("contract failure exposed credentials")
+			}
+		}
+		if len(s.recorded()) != 2 {
+			t.Fatal("contract failure retried the mutation")
+		}
+	}
+}
+
+func TestDeveloperInstallDoesNotFollowMutationRedirect(t *testing.T) {
+	t.Parallel()
+	var installs, redirected atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/auth.test":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `{"ok":true,"team_id":"T1","user_id":"U1"}`)
+		case "/apps.developerInstall":
+			installs.Add(1)
+			w.Header().Set("Location", "/repeated-install")
+			w.WriteHeader(http.StatusTemporaryRedirect)
+		case "/repeated-install":
+			redirected.Add(1)
+		}
+	}))
+	t.Cleanup(server.Close)
+	_, err := slack.NewClient().WithBaseURL(server.URL+"/").WithDeveloperToken("developer").
+		DeveloperAppInstall(t.Context(), slack.DeveloperInstallRequest{
+			AppID: "A1", WorkspaceID: "T1", BotScopes: []string{"chat:write"},
+		})
+	if err == nil || installs.Load() != 1 || redirected.Load() != 0 {
+		t.Fatalf("redirected mutation: error=%v, installs=%d, redirects=%d", err, installs.Load(), redirected.Load())
 	}
 }
 
