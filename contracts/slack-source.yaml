@@ -1,0 +1,217 @@
+openapi: 3.0.3
+info:
+  title: Slack workspace installation contract
+  version: 0.1.0
+  description: |
+    Provider-owned contract inferred from Slack CLI commit
+    6e69bce86ca32b1a90604000e43e033759e3ea4d, internal/api/app.go
+    and internal/api/session.go, plus Slack's public auth.test reference.
+    This is not a Slack-published OpenAPI
+    specification or a guarantee of backend compatibility.
+    Only workspace user service tokens and supplied app IDs are supported.
+    Success fields are optional because Slack returns failures in HTTP 200
+    envelopes. Adapters check ok, workspace/app identity and confirmation.
+servers:
+  - url: https://slack.com/api
+security:
+  - DeveloperToken: []
+paths:
+  /auth.test:
+    post:
+      operationId: authTest
+      description: Validate the service token's workspace and user identity.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyRequest'
+      responses:
+        '200':
+          description: Authentication result or Slack error envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTestResponse'
+  /apps.status:
+    post:
+      operationId: appsStatus
+      description: Observe supplied IDs; omitted IDs or flags are unknown.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusRequest'
+      responses:
+        '200':
+          description: Partial installation observations or Slack error envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+  /apps.developerInstall:
+    post:
+      operationId: appsDeveloperInstall
+      description: |
+        Install in the token's workspace. team_id is intentionally excluded:
+        Slack CLI sends it only for organization grants, which are unsupported.
+        A failure or lost response can follow partial execution; do not retry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstallRequest'
+      responses:
+        '200':
+          description: App identity and credentials or Slack error envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallResponse'
+  /apps.developerUninstall:
+    post:
+      operationId: appsDeveloperUninstall
+      description: Uninstall the app; a status observation must confirm absence.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UninstallRequest'
+      responses:
+        '200':
+          description: Slack success or error envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+components:
+  securitySchemes:
+    DeveloperToken:
+      type: http
+      scheme: bearer
+      description: Workspace user Slack CLI service token, separate from manifest tokens.
+  schemas:
+    EmptyRequest:
+      type: object
+      additionalProperties: false
+    Envelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        error:
+          type: string
+    AuthTestResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        error:
+          type: string
+        team_id:
+          type: string
+          nullable: true
+        user_id:
+          type: string
+          nullable: true
+        bot_id:
+          type: string
+          nullable: true
+        is_enterprise_install:
+          type: boolean
+          nullable: true
+    StatusRequest:
+      type: object
+      required: [app_ids, team_id]
+      properties:
+        app_ids:
+          type: array
+          items:
+            type: string
+        team_id:
+          type: string
+    Workspace:
+      type: object
+      properties:
+        team_id:
+          type: string
+    AppStatus:
+      type: object
+      required: [app_id]
+      properties:
+        app_id:
+          type: string
+        is_installed:
+          type: boolean
+          nullable: true
+    StatusResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        error:
+          type: string
+        team:
+          allOf:
+            - $ref: '#/components/schemas/Workspace'
+          nullable: true
+        apps:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/AppStatus'
+    InstallRequest:
+      type: object
+      required: [app_id, bot_scopes]
+      properties:
+        app_id:
+          type: string
+        bot_scopes:
+          type: array
+          items:
+            type: string
+        outgoing_domains:
+          type: array
+          items:
+            type: string
+    InstallationTokens:
+      type: object
+      properties:
+        bot:
+          type: string
+          nullable: true
+        app_level:
+          type: string
+          nullable: true
+        user:
+          type: string
+          nullable: true
+    InstallResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        error:
+          type: string
+        app_id:
+          type: string
+          nullable: true
+        api_access_tokens:
+          allOf:
+            - $ref: '#/components/schemas/InstallationTokens'
+          nullable: true
+    UninstallRequest:
+      type: object
+      required: [app_id, team_id]
+      properties:
+        app_id:
+          type: string
+        team_id:
+          type: string

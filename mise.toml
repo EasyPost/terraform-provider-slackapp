@@ -10,6 +10,8 @@ golangci-lint = "2.14.0"
 "github:mpyw/declscope" = "0.23.1"
 # The acceptance tests in internal/provider run this terraform.
 terraform = "1.16.5"
+"go:github.com/ogen-go/ogen/cmd/ogen" = "1.18.0"
+"github:mikefarah/yq" = "4.54.1"
 
 [tasks.build]
 description = "Build the provider binary"
@@ -54,3 +56,11 @@ run = "tfplugindocs generate --provider-name terraform-provider-slackapp"
 description = "Fail when docs/ is out of date with the provider schema"
 depends = ["docs"]
 run = "git diff --exit-code -- docs"
+
+[tasks.codegen]
+description = "Regenerate the API client and introspection with pinned tfspecgen"
+run = "bash scripts/codegen.sh generate"
+
+[tasks.codegen-check]
+description = "Verify API client generation and the full regeneration snapshot"
+run = "bash scripts/codegen.sh check"

@@ -1,0 +1,4 @@
+/auth.test
+/apps.status
+/apps.developerInstall
+/apps.developerUninstall

@@ -77,3 +77,15 @@ jobs:
       # docs/ is generated from the provider schema, so a schema change that
       # forgets to regenerate it fails here.
       - run: mise run docs-check
+
+  codegen:
+    name: Codegen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: jdx/mise-action@v5
+        with:
+          cache: true
+
+      - run: mise run codegen-check

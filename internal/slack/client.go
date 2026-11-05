@@ -24,6 +24,7 @@ type Client struct {
 	//declscope:shared
 	tokens *tokens.Source
 
+	//declscope:shared
 	baseURL string
 	//declscope:shared
 	developerToken string
